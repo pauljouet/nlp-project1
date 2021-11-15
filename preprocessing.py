@@ -5,10 +5,12 @@ from collections import defaultdict
 from typing import List
 from nltk.stem.snowball import SnowballStemmer
 import pandas as pd
-import gensim.models
+from gensim.models.word2vec import Word2Vec
 
 DIR = os.path.dirname(__file__)
 DATA_PATH = os.path.join(DIR, "data/filtered_openfoodfacts.csv")
+MODEL_PATH = os.path.join(DIR, "models/word_embedding.model")
+TOKENS_PATH = os.path.join(DIR, "data/tokens_list.txt")
 
 INFIX_DELIMITERS = {
     ':': ' ', 
@@ -137,11 +139,39 @@ def word_embedding(tokens_list: List[List[str]]):
             for ingredient_list in tokens_list:
                 yield ingredient_list
     sentences = Corpus()
-    return gensim.models.Word2Vec(sentences=sentences)
+    return Word2Vec(sentences=sentences)
+
+def save_tokens_list(tokens_list, path= TOKENS_PATH):
+    with open(path, 'w') as f:
+        for ingr_list in tokens_list:
+            f.write(','.join(ingr_list))
+            f.write('\n')
+
+def get_tokens_list():
+    if os.path.exists(TOKENS_PATH):
+        tokens_list = []
+        with open (TOKENS_PATH, 'r') as f:
+            for line in f:
+                tokens_list.append(line.split(','))
+        return tokens_list
+    return None
+    
 
 def preprocess(df):
-    tokens_list = clean_tokens(tokenize(df))
-    return tokens_list, word_embedding(tokens_list)
+    if os.path.exists(TOKENS_PATH):
+        tokens_list = get_tokens_list()
+    else:
+        tokens_list = clean_tokens(tokenize(df))
+        save_tokens_list(tokens_list)
+
+    if os.path.exists(MODEL_PATH):
+        model = Word2Vec.load(MODEL_PATH)
+    else:
+        model = word_embedding(tokens_list)
+    if not os.path.exists(MODEL_PATH):
+        model.save(MODEL_PATH)
+    
+    return tokens_list, model
 
 if __name__ == "__main__":
     print(tokenize(pd.read_csv(DATA_PATH, encoding= 'utf-8', delimiter= '\t'))[:10])
