@@ -1,0 +1,4 @@
+NLP-AMT-OpenFood.ipynb
+__pycache__/
+.ipynb_checkpoints/
+data/openfoodfacts.csv
